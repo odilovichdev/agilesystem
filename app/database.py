@@ -19,7 +19,7 @@ DB_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB
 
 engine = create_engine(url=DB_URL, echo=True)
 
-SessionLocal = sessionmaker(bind=engine, autocommit=True)
+SessionLocal = sessionmaker(bind=engine, autocommit=False)
 
 class Base(DeclarativeBase):
     ...

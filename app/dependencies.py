@@ -2,6 +2,7 @@ from typing import Annotated
 
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
+from fastapi import Depends
 
 
 def get_db():
@@ -12,4 +13,4 @@ def get_db():
         db.close()
 
 
-db_dep = Annotated[Session, get_db]
+db_dep = Annotated[Session, Depends(get_db)]
