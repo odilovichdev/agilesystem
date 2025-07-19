@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Annotated
 
 from dotenv import load_dotenv
-from jose import jwt
+from jose import jwt, JWTError
+from app.schemas.auth import Role
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from fastapi import Depends, Request, HTTPException
@@ -46,7 +47,7 @@ def get_current_user(db: db_dep, request: Request):
             SECRET_KEY,
             algorithms=ALGORITHM
         )
-        print(decoded_jwt.get("token_type"), "+++++")
+
         if decoded_jwt.get("token_type")!="access":
             raise HTTPException(
                 detail="Invalid token type=access",
@@ -54,7 +55,7 @@ def get_current_user(db: db_dep, request: Request):
             )
         user_id = decoded_jwt.get("user_id")
         user = db.query(User).filter(User.id==user_id).first()
-    except :
+    except JWTError:
         raise HTTPException(
             detail="Invalid token.",
             status_code=401
@@ -64,3 +65,25 @@ def get_current_user(db: db_dep, request: Request):
 
 
 current_user_dep = Annotated[User, Depends(get_current_user)]
+
+
+def only_project_owner(user: current_user_dep):
+    if user.role != Role.PROJECT_OWNER:
+        raise HTTPException(
+            status_code=403,
+            detail="Only project owners are allowed to perform this action."
+        )
+    return user
+
+project_owner_dep = Annotated[User, Depends(only_project_owner)]
+
+
+def only_project_manager(user: current_user_dep):
+    if user.role != Role.PROJECT_MANAGER:
+        raise HTTPException(
+            detail="Taskni faqat ProjectManger yarata oladi.",
+            status_code=403
+        )
+
+
+project_manager_dep = Annotated[User, Depends(only_project_manager)]

@@ -1,6 +1,7 @@
+from typing import List
 from app.database import Base
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Boolean, ForeignKey, DateTime, func, Text
 
 
@@ -26,6 +27,11 @@ class User(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_delated: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # 🧩 One-to-many relationship: User -> Projects
+    projects: Mapped[List["Project"]] = relationship(
+        back_populates="owner"
+    )
+
     def __str__(self):
         return f"User(email={self.email})"
 
@@ -37,7 +43,13 @@ class Project(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     key: Mapped[str] = mapped_column(String(10), nullable=True)
+
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id" , ondelete="CASCADE"))
+    # 🧩 Many-to-one relationship: Project -> User
+    owner: Mapped["User"] = relationship(
+        back_populates="projects"
+    )
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_private: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -75,8 +87,7 @@ class Task(Base, TimestampMixin):
     summary: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     priority: Mapped[str] = mapped_column(String(10), nullable=False)
-    due_date: Mapped[DateTime] = mapped_column(DateTime(timezone=True), 
-                                               default=func.now())
+    due_date: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
 
     project_id: Mapped[int] = mapped_column(Integer,
                                     ForeignKey("projects.id", ondelete="CASCADE"))

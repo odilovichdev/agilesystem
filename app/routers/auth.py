@@ -29,7 +29,7 @@ router = APIRouter(
 async def register(db: db_dep, user_in: UserRegisterIn):
     new_user = User(
         email=user_in.email,
-        role=user_in.role,
+        role=user_in.role.value,
         hashed_password=hashed_password(user_in.password)
         )
     
