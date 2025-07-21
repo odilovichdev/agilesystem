@@ -31,6 +31,21 @@ class User(Base, TimestampMixin):
     projects: Mapped[List["Project"]] = relationship(
         back_populates="owner"
     )
+    project_members: Mapped[List["ProjectMemmber"]] = relationship(
+        back_populates="members"
+    )
+
+    assignee_tasks: Mapped[List["Task"]] = relationship(
+        "Task",
+        back_populates="assignee",
+        foreign_keys="Task.assignee_id"
+    )
+
+    reporter_tasks: Mapped[List["Task"]] = relationship(
+        "Task",
+        back_populates="reporter",
+        foreign_keys="Task.reporter_id"
+    )
 
     def __str__(self):
         return f"User(email={self.email})"
@@ -49,6 +64,13 @@ class Project(Base, TimestampMixin):
     owner: Mapped["User"] = relationship(
         back_populates="projects"
     )
+    project_members: Mapped[List["ProjectMemmber"]] = relationship(
+        back_populates='project'
+    )
+
+    tasks: Mapped[List["Task"]] = relationship(
+        back_populates="project"
+    )
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_private: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -65,6 +87,13 @@ class ProjectMemmber(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
     joined_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=func.now())
 
+    members: Mapped["User"] = relationship(
+        back_populates="project_members"
+    )
+    project: Mapped["Project"] = relationship(
+        back_populates="project_members"
+    )
+
     def __str__(self):
         return f"ProjectMember(user_id={self.user_id}, project_id={self.project_id})"
     
@@ -75,6 +104,10 @@ class Status(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
+
+    task: Mapped[List["Task"]] = relationship(
+        back_populates="status"
+    )
 
     def __str__(self):
         return f"Status(name={self.name})"
@@ -91,13 +124,35 @@ class Task(Base, TimestampMixin):
 
     project_id: Mapped[int] = mapped_column(Integer,
                                     ForeignKey("projects.id", ondelete="CASCADE"))
+    
+    project: Mapped["Project"] = relationship(
+        back_populates="tasks"
+    )
+
     status_id: Mapped[int] = mapped_column(Integer, 
                                     ForeignKey("statuses.id", ondelete="CASCADE"))
+    
+    status: Mapped['Status'] = relationship(
+        back_populates="task"
+    )
+
     assignee_id: Mapped[int] = mapped_column(Integer,
                                     ForeignKey("users.id", ondelete="CASCADE"))
+    
+    assignee: Mapped["User"] = relationship(
+        "User",
+        back_populates="assignee_tasks",
+        foreign_keys=[assignee_id]
+    )
+
     reporter_id: Mapped[int] = mapped_column(Integer, 
                                     ForeignKey("users.id", ondelete="CASCADE"))
     
+    reporter: Mapped["User"] = relationship(
+        "User",
+        back_populates="reporter_tasks",
+        foreign_keys=[reporter_id]
+    )
 
     def __str__(self):
         return f"Task(summary={self.summary})"

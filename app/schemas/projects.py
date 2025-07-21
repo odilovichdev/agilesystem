@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from app.schemas.users import UserListOut
+from app.schemas.auth import Role
 
 
 class ProjectCreateIn(BaseModel):
@@ -42,5 +43,16 @@ class ProjectMemmberAddOut(ProjectMemmberAddIn):
     model_config = {
         "from_attributes": True
     }
+
+
+class ProjectUserOut(BaseModel):
+    id: int
+    email: EmailStr
+    role: Role
+    
+    model_config = {
+        "from_attributes": True
+    }
+
 
 # class ProjectUpdateOut()

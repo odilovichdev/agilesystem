@@ -13,7 +13,7 @@ router = APIRouter(
 
 @router.post("/create/", response_model=TaskCreateOut)
 async def task_create(db: db_dep, user: project_manager_dep, task_in: TaskCreateIn):
-    project = db.query(Task).filter(Project.id==task_in.project_id).first()
+    project = db.query(Project).filter(Project.id==task_in.project_id).first()
 
     # Project borligini tekshirish
     if not project:
@@ -31,6 +31,14 @@ async def task_create(db: db_dep, user: project_manager_dep, task_in: TaskCreate
             status_code=403
         )
     
+    manager = db.query(ProjectMemmber).filter(ProjectMemmber.project_id==task_in.project_id, ProjectMemmber.user_id==user.id).first()
+    
+    # taskni yaratayotgan manager project ga qo'shilganini tekshirish
+    if not manager:
+        raise HTTPException(
+            detail="Task yaratayptgan manager project ga biriktirlmagan.",
+            status_code=403
+        )
 
     # create new task
     new_task = Task(
@@ -42,7 +50,7 @@ async def task_create(db: db_dep, user: project_manager_dep, task_in: TaskCreate
         project_id=task_in.project_id,
         status_id=task_in.status_id,
         assignee_id=task_in.assignee_id,
-        repoter_id=user.id
+        reporter_id=user.id
     )
 
     db.add(new_task)

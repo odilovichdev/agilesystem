@@ -84,6 +84,8 @@ def only_project_manager(user: current_user_dep):
             detail="Taskni faqat ProjectManger yarata oladi.",
             status_code=403
         )
+    
+    return user
 
 
 project_manager_dep = Annotated[User, Depends(only_project_manager)]
