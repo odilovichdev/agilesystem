@@ -23,7 +23,6 @@ class TaskCreateIn(BaseModel):
 
     project_id: int
     status_id: int
-    assignee_id: int
 
 
 class TaskCreateOut(BaseModel):
@@ -35,7 +34,7 @@ class TaskCreateOut(BaseModel):
 
     project: ProjectCreateOut
     status: StatusCreateOut
-    assignee: UserListOut
+    assignee: UserListOut | None = None
 
     model_config = {
         "from_attributes": True
@@ -52,7 +51,7 @@ class TaskListOut(BaseModel):
 
     project: ProjectCreateOut
     status: StatusCreateOut
-    assignee: UserListOut
+    assignee: UserListOut | None = None
     reporter: UserListOut
 
     model_config = {
@@ -73,3 +72,8 @@ class TaskEditOut(TaskCreateIn):
 
 class TaskDetailOut(TaskListOut):
     ...
+
+
+class TaskAddAssigneeIn(BaseModel):
+    assignee_id: int
+    status_id: int

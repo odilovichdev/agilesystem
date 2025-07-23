@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy.orm import selectinload
 
 
-from app.models import Task, Project, ProjectMemmber
+from app.models import Task, Project, ProjectMemmber, Status
 from app.dependencies import db_dep, project_manager_dep
 from app.schemas.tasks import (
     TaskCreateIn, 
@@ -12,7 +12,8 @@ from app.schemas.tasks import (
     TaskListOut,
     TaskEditIn,
     TaskEditOut,
-    TaskDetailOut
+    TaskDetailOut,
+    TaskAddAssigneeIn
 )
 
 router = APIRouter(
@@ -31,15 +32,7 @@ async def task_create(db: db_dep, user: project_manager_dep, task_in: TaskCreate
             detail="Project Not Found.",
             status_code=404
         )
-    
-    project_member = db.query(ProjectMemmber).filter(ProjectMemmber.project_id==task_in.project_id, ProjectMemmber.user_id==task_in.assignee_id).first()
 
-    # taskga biriktirilayotgan user project ga qo'shilganini tekshirish
-    if not project_member:
-        raise HTTPException(
-            detail="Bu user project ga biriktirilmagan.",
-            status_code=403
-        )
     
     manager = db.query(ProjectMemmber).filter(ProjectMemmber.project_id==task_in.project_id, ProjectMemmber.user_id==user.id).first()
     
@@ -59,7 +52,6 @@ async def task_create(db: db_dep, user: project_manager_dep, task_in: TaskCreate
         due_date=task_in.due_date,
         project_id=task_in.project_id,
         status_id=task_in.status_id,
-        assignee_id=task_in.assignee_id,
         reporter_id=user.id
     )
 
@@ -159,4 +151,51 @@ async def task_detail(db: db_dep, task_id: int):
         )
     
     return task
+
+
+@router.put("/{task_id:int}/add-assignee/", response_model=TaskDetailOut)
+async def task_add_assignee(db: db_dep, user: project_manager_dep, task_id: int, task_in: TaskAddAssigneeIn):
+    task = db.query(Task).filter(Task.id==task_id).first()
+
+
+    if task.reporter_id != user.id:
+        raise HTTPException(
+            detail="Siz bu taskni yaratmagansiz.",
+            status_code=403
+        )
+
+    if not task:
+        raise HTTPException(
+            detail="Task not found.",
+            status_code=404
+        )
+    
+    status = db.query(Status).filter(Status.id==task_in.status_id).first()
+
+    if not status:
+        raise HTTPException(
+            detail="Status not found.",
+            status_code=404
+        )
+    
+    task.assignee_id = task_in.assignee_id
+    task.status_id = task_in.status_id
+
+    db.commit()
+    db.refresh(task)
+
+    return task
+
+    
+
+# @router.patch("/{task_id:int}/")
+    
+
+
+
+
+
+
+
+
 
