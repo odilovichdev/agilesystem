@@ -4,8 +4,7 @@ from app.routers import (
     auth_router, 
     project_router, 
     user_router, 
-    task_router, 
-    status_router
+    task_router
 )
 
 app = FastAPI()
@@ -18,4 +17,3 @@ app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(user_router)
 app.include_router(task_router)
-app.include_router(status_router)

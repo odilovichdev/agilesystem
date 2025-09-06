@@ -1,79 +1,61 @@
-from enum import Enum
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
-from app.schemas.users import UserListOut
-from app.schemas.status import StatusCreateOut
-from app.schemas.projects import ProjectCreateOut
+from app.enums import Status, Priority, Role
 
 
-class Priority(str, Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
-class TaskCreateIn(BaseModel):
-    key: str
+class TaskCreateRequest(BaseModel):
+    project_key: str
     summary: str
     description: str | None = None
-    priority: Priority = Priority.LOW.value
+    status: Status
+    priority: Priority 
+    assignee_id: int
     due_date: datetime
 
-    project_id: int
-    status_id: int
 
-
-class TaskCreateOut(BaseModel):
+class TaskListProjectNested(BaseModel):
     key: str
-    summary: str
-    description: str | None = None
-    priority: Priority = Priority.LOW.value
-    due_date: datetime
-
-    project: ProjectCreateOut
-    status: StatusCreateOut
-    assignee: UserListOut | None = None
-
-    model_config = {
-        "from_attributes": True
-    }
 
 
-class TaskListOut(BaseModel):
+class TaskListUserNested(BaseModel):
     id: int
+    email: EmailStr
+    role: Role
+    fullname: str | None 
+
+
+class TaskListResponse(BaseModel):
+    id: int
+    project: TaskListProjectNested
     key: str
     summary: str
-    description: str | None = None
-    priority: Priority = Priority.LOW.value
+    status: Status
+    priority: Priority
+
+
+class TaskDetailResponse(BaseModel):
+    id: int
+    project: TaskListProjectNested
+    key: str
+    summary: str
+    status: Status
+    priority: Priority
+    assignee: TaskListUserNested
+    reporter: TaskListUserNested
     due_date: datetime
 
-    project: ProjectCreateOut
-    status: StatusCreateOut
-    assignee: UserListOut | None = None
-    reporter: UserListOut
 
-    model_config = {
-        "from_attributes": True
-    }
-
-
-class TaskEditIn(BaseModel):
-    key: str | None = None
+class TaskUpdateRequest(BaseModel):
+    status: Status | None = None
     summary: str | None = None
     description: str | None = None
+    priority: Priority | None = None
+    assignee_id: int | None = None
     due_date: datetime | None = None
 
 
-class TaskEditOut(TaskCreateIn):
-    ...
+class TaskMoveRequest(BaseModel):
+    status: Status
 
-
-class TaskDetailOut(TaskListOut):
-    ...
-
-
-class TaskAddAssigneeIn(BaseModel):
-    assignee_id: int
-    status_id: int

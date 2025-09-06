@@ -4,15 +4,22 @@ from sqlalchemy.orm import joinedload
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.auth import Role
-from app.models import Project, ProjectMemmber, User
-from app.dependencies import db_dep, project_owner_dep
+from app.services.projects import generate_project_key
+from app.models import Project, ProjectMember, User
+from app.dependencies import (
+    db_dep, 
+    project_owner_dep,
+    current_user_dep
+)
+
 from app.schemas import (
-    ProjectCreateIn, 
-    ProjectCreateOut, 
-    ProjectUpdate, 
-    ProjectMemmberAddOut, 
-    ProjectMemmberAddIn,
-    ProjectUserOut
+    ProjectCreateRequest, 
+    ProjectInviteRequest, 
+    ProjectKickRequest, 
+    ProjectMemmberResponse, 
+    ProjectResponse,
+    ProjectUpdateRequest,
+    TaskListResponse
 )
 
 router = APIRouter(
@@ -21,16 +28,21 @@ router = APIRouter(
 )
 
 
+@router.post("/create/")
+async def project_create(
+    db: db_dep, data: ProjectCreateRequest, user: project_owner_dep
+    ):
 
-@router.post("/create/", response_model=ProjectCreateOut)
-async def project_create(db: db_dep, project_in: ProjectCreateIn, user_in: project_owner_dep):
+    generated_key = generate_project_key(db=db, name=data.name)
+    print(generated_key)
 
     # project owner yangi project yaratishi
     new_project = Project(
-        name=project_in.name,
-        description=project_in.description,
-        key=project_in.key,
-        owner_id=user_in.id
+        name=data.name,
+        description=data.description,
+        key=generated_key,
+        owner_id=user.id,
+        is_private=data.is_private
     )
 
     db.add(new_project)
@@ -38,48 +50,60 @@ async def project_create(db: db_dep, project_in: ProjectCreateIn, user_in: proje
     db.refresh(new_project)
 
     # project yaralganda ownerni ProjectMemmberga qo'shish
-    new_project_memmber = ProjectMemmber(
+    new_project_memmber = ProjectMember(
         project_id=new_project.id,
-        user_id=user_in.id
+        user_id=user.id
     )
 
     db.add(new_project_memmber)
     db.commit()
     db.refresh(new_project_memmber)
 
-    return new_project
+    return {"detail": "Create project successfully!"}
 
 
-@router.get("/{project_id:int}/", response_model=ProjectCreateOut)
-async def product_detail(db: db_dep, project_id: int):
-    project = db.query(Project).filter(Project.id==project_id).first()
+@router.get("/all/", response_model=List[ProjectResponse])
+async def get_all_project(db: db_dep):
+    projects = db.query(Project).all()
+
+    if not projects:
+        raise HTTPException(404, "Projects Not Found.")
+
+    return projects
+
+
+@router.get("/{project_key:str}/", response_model=ProjectResponse)
+async def get_project_by_key(db: db_dep, project_key: str):
+    project = db.query(Project).filter(Project.key==project_key).first()
+
     if not project:
-        raise HTTPException(
-            detail="Page not found.",
-            status_code=404
-        ) 
+        raise HTTPException(404, "Project Not Found.")
+    
     return project
 
 
-@router.get("/list/", response_model=List[ProjectCreateOut])
-async def project_list(db: db_dep):
-    products = db.query(Project).options(joinedload(Project.owner)).all()
-    return products
+@router.put("/{project_key:str}/update", response_model=ProjectUpdateRequest)
+async def project_update(
+    db: db_dep, 
+    project_key: str, 
+    user: project_owner_dep,
+    new_project: ProjectUpdateRequest):
 
-
-@router.put("/{project_id:int}/update", response_model=ProjectUpdate)
-async def project_update(db: db_dep, project_id:int, new_project: ProjectUpdate):
-    project = db.query(Project).filter(Project.id==project_id).first()
+    project = db.query(Project).filter(Project.key==project_key).first()
 
     if not project:
-        raise HTTPException(
-            detail="Project not found.",
-            status_code=404
-        )
+        raise HTTPException(404, "Project not found.")
+    
+    if project.owner_id != user.id:
+        raise HTTPException(400, "Faqat o'zingiz yaratgan loyihani edit qila olasiz.")
+    
     update_project = new_project.model_dump(exclude_unset=True)
 
     for key, value in update_project.items():
         setattr(project, key, value)
+
+    if "name" in new_project:
+        project.key = generate_project_key(db=db, name=project.name)
 
     db.commit()
     db.refresh(project)
@@ -87,87 +111,93 @@ async def project_update(db: db_dep, project_id:int, new_project: ProjectUpdate)
     return project
 
 
-@router.delete("{project_id:int}/delete/")
-async def project_delete(db: db_dep, project_id: int):
-    project = db.query(Project).filter(Project.id==project_id).first()
+@router.get("/{project_key}/members/", response_model=List[ProjectMemmberResponse])
+async def get_project_member(db: db_dep, user: current_user_dep, project_key: str):
+    project = db.query(Project).filter(Project.key==project_key).first()
+
     if not project:
-        raise HTTPException(
-            detail="Project not found.",
-            status_code=404
-        )
-    db.delete(project)
-    db.commit()
-    return {"success": True, "message": "User is successfully deleted."}
+        raise HTTPException(404, "Project Not Found.")
+    
+    members = project.members
+
+    return members
 
 
-@router.post("/{project_id:int}/add-member/", response_model=ProjectMemmberAddOut)
+@router.post("/{project_key:str}/members/invite/")
 async def project_add_member(
     db: db_dep, 
-    project_id:int,
+    project_key:str,
     user: project_owner_dep, 
-    project_memmber_in: ProjectMemmberAddIn
+    invite_data: ProjectInviteRequest
     ):
     
-    project = db.query(Project).filter(Project.id==project_id).first()
+    project = db.query(Project).filter(Project.key==project_key).first()
 
     if not project:
-        raise HTTPException(
-            detail="Project topilmadi.",
-            status_code=404
-        )
+        raise HTTPException(404, "Project Not Found.")
 
     # User qo'shayotgan odam shu loyihani yaratganini tekshirish
     if project.owner_id != user.id:
-        raise HTTPException(
-            detail="Siz faqat o'zingiz yaratgan projectga memmber qo'sha olasiz.",
-            status_code=403
-        )
+        raise HTTPException(403, "Siz faqat o'zingiz yaratgan projectga a'zo qo'sha olasiz.")
     
-    p_user = db.query(User).filter(User.id==project_memmber_in.user_id).first()
+    user = db.query(User).filter(User.id==invite_data.user_id).first()
+
+    if not user:
+        raise HTTPException(404, "User not found to invite")
+
+    if user.role == Role.owner.value:
+        raise HTTPException(403, "Loyihada bitta Project Owner bo'ladi.")
     
-    if p_user.role == Role.PROJECT_OWNER.value:
-        raise HTTPException(
-            detail="Loyihada bitta Project Owner bo'ladi.",
-            status_code=403
-        )
+    # user project ga biriktirilmaganini tekshirish
+    if user in project.members:
+        raise HTTPException(400, "User is already in the project.")
     
-    project_memmber = db.query(ProjectMemmber).filter(ProjectMemmber.user_id==project_memmber_in.user_id).first()
+    new_member = ProjectMember(user_id=user.id, project_id=project.id)
 
-    # User oldin bu loyihaga qo'shilganini tekshirish
-    if project_memmber:
-        raise HTTPException(
-            detail="Bu user project azosi.",
-            status_code=400
-        )
-
-    # Loyihaga yangi user qo'shish
-    new_project_memmber = ProjectMemmber(
-        project_id=project_id,
-        user_id=project_memmber_in.user_id
-    )
-
-    db.add(new_project_memmber)
+    db.add(new_member)
     db.commit()
-    db.refresh(new_project_memmber)
+    db.refresh(new_member)
 
-    return new_project_memmber
+    return {"detail": "User loyihaga muvaffaqiyatli biriktirildi."}
     
 
-@router.get("/{project_id:int}/users", response_model=List[ProjectUserOut])
-async def project_users(db: db_dep, project_id:int):
-    project = db.query(Project).filter(Project.id==project_id).first()
+@router.delete("/{project_key}/members/kick/")
+async def kick_project_member(
+    db: db_dep, 
+    user: project_owner_dep, 
+    project_key: str,
+    kick_data: ProjectKickRequest):
+    
+    project = db.query(Project).filter(Project.key==project_key).first()
 
     if not project:
-        raise HTTPException(
-            detail="Project Not Found.",
-            status_code=404
-        )
+        raise HTTPException(404, "Project Not Found.")
     
-    members = db.query(User).join(
-        ProjectMemmber, ProjectMemmber.user_id==User.id
-    ).filter(ProjectMemmber.project_id==project_id).all()
+    if project.owner.id != user.id:
+        raise HTTPException(403, "Siz bu loyihani yaratmagansiz. Uni o'chira olmaysiz.")
 
-    return members
+    member = db.query(ProjectMember).filter(
+        ProjectMember.user_id==kick_data.user_id, 
+        ProjectMember.project_id==project.id).first()
+
+    if not member:
+        raise HTTPException(404, "Project da bunday azo yo'q.")
     
+    db.delete(member)
+    db.commit()
     
+    return {"detail": "Xodim loyihadan muvaffaqiyatli chiqarildi."}
+
+
+@router.get("/{project_key:str}/tasks/", response_model=List[TaskListResponse])
+async def get_project_task(db: db_dep, user: current_user_dep, project_key: str):
+    project = db.query(Project).filter(Project.key==project_key).first()
+
+    if not project:
+        raise HTTPException(404, "Project Not Found.")
+    
+    tasks = project.tasks
+
+    return tasks
+
     

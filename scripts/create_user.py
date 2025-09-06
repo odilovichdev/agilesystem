@@ -8,8 +8,8 @@ import random
 import typer
 from faker import Faker
 
+from app.enums import Role
 from app.models import User
-from app.schemas.users import Role
 from app.database import SessionLocal
 from app.utils import hashed_password
 
@@ -21,15 +21,17 @@ faker = Faker()
 @apps.command()
 def create_fake_users(count: int=10):
     db = SessionLocal()
+    users = []
     try:
-        for _ in range(count):
-            user = User(
+        for i in range(count):
+            users.append(User(
                 email=faker.unique.email(),
                 hashed_password=hashed_password("123456"),
                 fullname=faker.name(),
                 role=random.choice([role.value for role in Role])
-            )
-            db.add(user)
+            ))
+            print(i)
+        db.add_all(users)
         db.commit()
         typer.echo(f"{count} ta user yaratildi.")
     except Exception as e:

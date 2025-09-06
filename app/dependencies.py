@@ -1,23 +1,14 @@
-import os
-from pathlib import Path
 from typing import Annotated
 
-from dotenv import load_dotenv
 from jose import jwt, JWTError
-from app.schemas.auth import Role
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from fastapi import Depends, Request, HTTPException
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
+from app.enums import Role
 from app.models import User
-
-
-load_dotenv(dotenv_path=Path(__name__).resolve().parent / ".env")
-
-SECRET_KEY=os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = 180
-REFRESH_TOKEN_EXPIRE_MINUTES = 465200
+from app.settings import ALGORITHM, SECRET_KEY
 
 
 def get_db():
@@ -30,62 +21,66 @@ def get_db():
 
 db_dep = Annotated[Session, Depends(get_db)]
 
-def get_current_user(db: db_dep, request: Request):
-    auth_headers = request.headers.get("Authorization")
-    is_bearer = auth_headers.startswith("Bearer") if auth_headers else False
-    token = auth_headers.split(" ")[1] if auth_headers else ""
 
-    if not auth_headers and is_bearer:
-        raise HTTPException(
-            detail="You are not authenticated.",
-            status_code=401
-        )
+"""#######Authentication dependencies#############"""
+
+oauth2_schema = OAuth2PasswordBearer(tokenUrl='auth/login/')
+
+oauth2_schema_dep = Annotated[str, Depends(oauth2_schema)]
+oauth2_form_dep = Annotated[OAuth2PasswordRequestForm, Depends()]
+
+
+async def get_current_user(db: db_dep, token: oauth2_schema_dep):
     
     try:
-        decoded_jwt = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=ALGORITHM
+        payload = jwt.decode(
+            token=token,
+            key=SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_exp": True}
         )
 
-        if decoded_jwt.get("token_type")!="access":
-            raise HTTPException(
-                detail="Invalid token type=access",
-                status_code=401
-            )
-        user_id = decoded_jwt.get("user_id")
-        user = db.query(User).filter(User.id==user_id).first()
-    except JWTError:
-        raise HTTPException(
-            detail="Invalid token.",
-            status_code=401
-        )
+        id = payload.get("user_id")
 
-    return user
+        if id is None:
+            raise HTTPException(401, "Invalid access token")
+        
+        user = db.query(User).filter(User.id==id).first()
+
+        if not user:
+            raise HTTPException(404, "User Not Found.")
+        
+        if not user.is_active:
+            raise HTTPException(400, "Inactive user")
+        
+        return user
+    except JWTError as err:
+        raise HTTPException(401, "Invalid access token") from err
+    except jwt.ExpiredSignatureError as err:
+        raise HTTPException(401, "Access token has expired") from err
 
 
 current_user_dep = Annotated[User, Depends(get_current_user)]
 
 
-def only_project_owner(user: current_user_dep):
-    if user.role != Role.PROJECT_OWNER:
+async def get_project_owner(current_user: current_user_dep):
+    if current_user.role != Role.owner:
         raise HTTPException(
             status_code=403,
             detail="Only project owners are allowed to perform this action."
         )
-    return user
-
-project_owner_dep = Annotated[User, Depends(only_project_owner)]
+    return current_user
 
 
-def only_project_manager(user: current_user_dep):
-    if user.role != Role.PROJECT_MANAGER:
+async def get_project_manager(current_user: current_user_dep):
+    if current_user.role != Role.manager:
         raise HTTPException(
             detail="Taskni faqat ProjectManger yarata oladi.",
             status_code=403
         )
     
-    return user
+    return current_user
 
 
-project_manager_dep = Annotated[User, Depends(only_project_manager)]
+project_owner_dep = Annotated[User, Depends(get_project_owner)]
+project_manager_dep = Annotated[User, Depends(get_project_manager)]

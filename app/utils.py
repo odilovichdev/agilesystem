@@ -1,21 +1,11 @@
-import os
-from pathlib import Path
 from datetime import timedelta, datetime, timezone
 
 from jose import jwt
-from dotenv import load_dotenv
 from passlib.context import CryptContext
 
-load_dotenv(dotenv_path=Path(__name__).resolve().parent / ".env")
+from app.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 
-SECRET_KEY=os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
-
-pwd_context = CryptContext(
-    schemes=['argon2'],
-    deprecated="auto"
-)
+pwd_context = CryptContext(schemes=['argon2'],deprecated="auto")
 
 
 def hashed_password(password: str):
@@ -27,19 +17,28 @@ def verify_password(plain_password:str, hashed_password) -> bool:
 
 
 def create_jwt_token(data: dict, expires_delta: timedelta | None = None):
+    """
+    Creates a new JWT token for logging-in user
+    """
+
     to_encode = data.copy()
 
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=expires_delta)
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-        
-    to_encode.update({"exp": expire, "token_type": "access"})
+    delta = (
+        timedelta(minutes=expires_delta)
+        if expires_delta
+        else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
 
-    if expires_delta != ACCESS_TOKEN_EXPIRE_MINUTES:
-        to_encode.update({"exp": expire, "token_type": "refresh"})
-
+    expire_time = datetime.now(timezone.utc) + delta
+    to_encode.update({"exp": expire_time})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     return encoded_jwt
 
+
+def generate_activation_token(user_id: int):
+    return jwt.encode({"user_id": user_id}, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_user_from_jwt_token(token: str):
+    return jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)

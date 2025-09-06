@@ -1,8 +1,8 @@
-"""add: models initialize
+"""feat: change models
 
-Revision ID: b91f64e71518
+Revision ID: 4febee6b7bab
 Revises: 
-Create Date: 2025-07-17 19:18:28.100321
+Create Date: 2025-08-03 18:58:49.709305
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b91f64e71518'
+revision: str = '4febee6b7bab'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,7 +30,7 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=100), nullable=False),
-    sa.Column('password', sa.String(), nullable=False),
+    sa.Column('hashed_password', sa.String(), nullable=False),
     sa.Column('fullname', sa.String(length=100), nullable=True),
     sa.Column('avatar', sa.String(length=255), nullable=True),
     sa.Column('role', sa.String(length=50), nullable=False),
@@ -58,22 +58,22 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('project_id', sa.Integer(), nullable=False),
-    sa.Column('joinedat', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('joined_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('tasks',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
     sa.Column('key', sa.String(length=20), nullable=False),
     sa.Column('summary', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('priority', sa.String(length=10), nullable=False),
-    sa.Column('due_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('project_id', sa.Integer(), nullable=False),
     sa.Column('status_id', sa.Integer(), nullable=False),
-    sa.Column('assignee_id', sa.Integer(), nullable=False),
+    sa.Column('priority', sa.String(length=10), nullable=False),
+    sa.Column('assignee_id', sa.Integer(), nullable=True),
     sa.Column('reporter_id', sa.Integer(), nullable=False),
+    sa.Column('due_date', sa.DateTime(timezone=True), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['assignee_id'], ['users.id'], ondelete='CASCADE'),
