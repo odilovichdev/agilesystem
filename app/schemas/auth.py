@@ -5,7 +5,7 @@ from app.enums import Role
 
 class UserRegisterRequest(BaseModel):
     email: EmailStr
-    password: str| None = Field(min_length=6, max_length=16)
+    password: str | None = Field(min_length=6, max_length=16)
     role: Role
 
 

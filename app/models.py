@@ -1,8 +1,9 @@
 from typing import List
-from app.database import Base
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Boolean, ForeignKey, DateTime, func, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+
+from app.database import Base
 
 
 class TimestampMixin:
@@ -10,8 +11,7 @@ class TimestampMixin:
         DateTime(timezone=True), default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), default=func.now(),
-        onupdate=func.now()
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
     )
 
 
@@ -25,7 +25,9 @@ class User(Base, TimestampMixin):
     avatar: Mapped[str] = mapped_column(String(255), nullable=True)
     role: Mapped[str] = mapped_column(String(50), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_delated: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
 
     owned_projects: Mapped[List["Project"]] = relationship(
         "Project", back_populates="owner"
@@ -35,11 +37,9 @@ class User(Base, TimestampMixin):
         "ProjectMember", back_populates="user"
     )
 
-    comments: Mapped[List["Comment"]] = relationship(
-        "Comment", back_populates="user"
-    )
+    comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="user")
 
-    assigned_tasks: Mapped[List['Task']] = relationship(
+    assigned_tasks: Mapped[List["Task"]] = relationship(
         "Task", back_populates="assignee", foreign_keys="Task.assignee_id"
     )
 
@@ -48,13 +48,13 @@ class User(Base, TimestampMixin):
     )
 
     received_notifications: Mapped[List["Notification"]] = relationship(
-        "Notification", back_populates="recipient",
-        foreign_keys="Notification.recipient_id"
+        "Notification",
+        back_populates="recipient",
+        foreign_keys="Notification.recipient_id",
     )
 
     send_notifications: Mapped[List["Notification"]] = relationship(
-        "Notification", back_populates="sender",
-        foreign_keys="Notification.sender_id"
+        "Notification", back_populates="sender", foreign_keys="Notification.sender_id"
     )
 
     audit_logs: Mapped[List["AuditLog"]] = relationship(
@@ -72,25 +72,21 @@ class Project(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     key: Mapped[str] = mapped_column(String(10), nullable=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id" , ondelete="CASCADE"))
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_private: Mapped[bool] = mapped_column(Boolean, default=False)
 
-   
-    owner: Mapped["User"] = relationship(
-        "User",back_populates="owned_projects"
-    )
+    owner: Mapped["User"] = relationship("User", back_populates="owned_projects")
 
     members: Mapped[List["ProjectMember"]] = relationship(
-        "ProjectMember",back_populates='project')
+        "ProjectMember", back_populates="project"
+    )
 
     notifications: Mapped[List["Notification"]] = relationship(
         "Notification", back_populates="project"
     )
 
-    tasks: Mapped[List["Task"]] = relationship(
-        "Task",back_populates="project"
-    )
+    tasks: Mapped[List["Task"]] = relationship("Task", back_populates="project")
 
     def __str__(self):
         return f"Project(key={self.key})"
@@ -101,16 +97,16 @@ class ProjectMember(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
-    joined_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=func.now())
-
-    project: Mapped["Project"] = relationship(
-        "Project", back_populates="members"
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE")
+    )
+    joined_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
     )
 
-    user: Mapped["User"] = relationship(
-        "User", back_populates="member_projects"
-    )
+    project: Mapped["Project"] = relationship("Project", back_populates="members")
+
+    user: Mapped["User"] = relationship("User", back_populates="member_projects")
 
     def __str__(self):
         return f"ProjectMember(user_id={self.user_id}, project_id={self.project_id})"
@@ -119,23 +115,36 @@ class ProjectMember(Base):
 class Task(Base, TimestampMixin):
     __tablename__ = "tasks"
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(Integer,ForeignKey("projects.id", ondelete="CASCADE"))
+    project_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("projects.id", ondelete="CASCADE")
+    )
     key: Mapped[str] = mapped_column(String(20), nullable=False)
     summary: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     status: Mapped[int] = mapped_column(String(10), nullable=False)
     priority: Mapped[str] = mapped_column(String(10), nullable=False)
-    assignee_id: Mapped[int] = mapped_column(Integer,ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
-    reporter_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    assignee_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    reporter_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    )
     due_date: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
 
-    
     project: Mapped["Project"] = relationship("Project", back_populates="tasks")
-    assignee: Mapped["User"] = relationship("User",back_populates="assigned_tasks",foreign_keys="Task.assignee_id")
-    reporter: Mapped["User"] = relationship("User",back_populates="reported_tasks",foreign_keys="Task.reporter_id")
+    assignee: Mapped["User"] = relationship(
+        "User", back_populates="assigned_tasks", foreign_keys="Task.assignee_id"
+    )
+    reporter: Mapped["User"] = relationship(
+        "User", back_populates="reported_tasks", foreign_keys="Task.reporter_id"
+    )
     comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="task")
-    notifications: Mapped[List["Notification"]] = relationship("Notification", back_populates="task")
-    audit_logs: Mapped[List["AuditLog"]] = relationship("AuditLog", back_populates="task")
+    notifications: Mapped[List["Notification"]] = relationship(
+        "Notification", back_populates="task"
+    )
+    audit_logs: Mapped[List["AuditLog"]] = relationship(
+        "AuditLog", back_populates="task"
+    )
 
     def __str__(self):
         return f"Task(summary={self.summary})"
@@ -145,8 +154,12 @@ class Comment(Base, TimestampMixin):
     __tablename__ = "comments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    task_id: Mapped[int] = mapped_column(Integer,ForeignKey("tasks.id", ondelete="CASCADE"))
-    user_id: Mapped[int] = mapped_column(Integer,ForeignKey("users.id", ondelete="CASCADE"))
+    task_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tasks.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     task: Mapped["Task"] = relationship("Task", back_populates="comments")
@@ -162,25 +175,31 @@ class Notification(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
-    recipient_id: Mapped[int] = mapped_column(Integer,ForeignKey("users.id", ondelete="CASCADE"))
-    sender_id: Mapped[int] = mapped_column(Integer,ForeignKey("users.id", ondelete="CASCADE"))
-    task_id: Mapped[int] = mapped_column(Integer,ForeignKey("tasks.id", ondelete="CASCADE"))
-    project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id", onupdate="CASCADE"))
+    recipient_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    sender_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    task_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tasks.id", ondelete="CASCADE")
+    )
+    project_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("projects.id", onupdate="CASCADE")
+    )
 
     recipient: Mapped["User"] = relationship(
-        "User", 
-        back_populates="received_notifications", 
-        foreign_keys="Notification.recipient_id")
+        "User",
+        back_populates="received_notifications",
+        foreign_keys="Notification.recipient_id",
+    )
     sender: Mapped["User"] = relationship(
-        "User", 
-        back_populates="send_notifications", 
-        foreign_keys="Notification.sender_id")
-    task: Mapped["Task"] = relationship(
-        "Task",
-        back_populates="notifications")
-    project: Mapped["Project"] = relationship(
-        "Project",
-        back_populates="notifications")
+        "User",
+        back_populates="send_notifications",
+        foreign_keys="Notification.sender_id",
+    )
+    task: Mapped["Task"] = relationship("Task", back_populates="notifications")
+    project: Mapped["Project"] = relationship("Project", back_populates="notifications")
 
     def __str__(self):
         return f"Notification(user_id={self.recipient_id})"
@@ -191,22 +210,18 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     action: Mapped[str] = mapped_column(String(250), nullable=False)
-    timestamp: Mapped[DateTime] = mapped_column(DateTime(timezone=True),default=func.now())
-    user_id: Mapped[int] = mapped_column(Integer,ForeignKey("users.id", ondelete='CASCADE'))
-    task_id: Mapped[int] = mapped_column(Integer,ForeignKey("tasks.id", ondelete="CASCADE"))
+    timestamp: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    task_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tasks.id", ondelete="CASCADE")
+    )
 
-    user: Mapped["User"] = relationship(
-        "User",
-        back_populates="audit_logs")
-    task: Mapped["Task"] = relationship(
-        "Task", 
-        back_populates="audit_logs")
-    
+    user: Mapped["User"] = relationship("User", back_populates="audit_logs")
+    task: Mapped["Task"] = relationship("Task", back_populates="audit_logs")
 
     def __str__(self):
         return f"AuditLog(user_id={self.user_id})"
-
-
-
-
-

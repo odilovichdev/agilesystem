@@ -8,6 +8,4 @@ class UserListOut(BaseModel):
     email: EmailStr
     role: Role
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}

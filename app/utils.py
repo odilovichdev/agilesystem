@@ -1,18 +1,18 @@
-from datetime import timedelta, datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from jose import jwt
 from passlib.context import CryptContext
 
-from app.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
+from app.settings import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
 
-pwd_context = CryptContext(schemes=['argon2'],deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def hashed_password(password: str):
     return pwd_context.hash(password)
 
 
-def verify_password(plain_password:str, hashed_password) -> bool:
+def verify_password(plain_password: str, hashed_password) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 

@@ -8,19 +8,17 @@ from app.settings import ALLOWED_EXTENSIONS, MAX_FILE_SIZE, MEDIA_PATH, MEDIA_UR
 
 
 async def validate_image(file: UploadFile):
-
     # check file extention
     file_ext = os.path.splitext(file.filename)[1].lower()
 
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(400, "Invalid file type")
-    
+
     # check file size
     if file.size > MAX_FILE_SIZE:
         raise HTTPException(400, "File too large")
 
     return file
-
 
 
 async def save_avatar_image(file: UploadFile) -> str:
@@ -34,27 +32,5 @@ async def save_avatar_image(file: UploadFile) -> str:
 
     with file_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
+
     return f"{MEDIA_URL}/{filename}"
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

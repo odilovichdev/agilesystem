@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 
 [[package]]
@@ -13,6 +13,7 @@ dependencies = [
     { name = "fastapi", extra = ["all"] },
     { name = "fastapi-mail" },
     { name = "flower" },
+    { name = "jinja2" },
     { name = "passlib", extra = ["argon2"] },
     { name = "pre-commit" },
     { name = "psycopg2-binary" },
@@ -21,6 +22,7 @@ dependencies = [
     { name = "redis" },
     { name = "ruff" },
     { name = "sqlalchemy" },
+    { name = "starlette-admin" },
     { name = "typer" },
 ]
 
@@ -32,6 +34,7 @@ requires-dist = [
     { name = "fastapi", extras = ["all"], specifier = ">=0.116.1" },
     { name = "fastapi-mail", specifier = ">=1.5.0" },
     { name = "flower", specifier = ">=2.0.1" },
+    { name = "jinja2", specifier = ">=3.1.6" },
     { name = "passlib", extras = ["argon2"], specifier = ">=1.7.4" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
@@ -40,6 +43,7 @@ requires-dist = [
     { name = "redis", specifier = ">=6.4.0" },
     { name = "ruff", specifier = ">=0.12.3" },
     { name = "sqlalchemy", specifier = ">=2.0.41" },
+    { name = "starlette-admin", specifier = ">=0.15.1" },
     { name = "typer", extras = ["all"], specifier = ">=0.16.0" },
 ]
 
@@ -1102,6 +1106,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0a/69/662169fdb92fb96ec3eaee218cf540a629d629c86d7993d9651226a6789b/starlette-0.47.1.tar.gz", hash = "sha256:aef012dd2b6be325ffa16698f9dc533614fb1cebd593a906b90dc1025529a79b", size = 2583072, upload-time = "2025-06-21T04:03:17.337Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/95/38ef0cd7fa11eaba6a99b3c4f5ac948d8bc6ff199aabd327a29cc000840c/starlette-0.47.1-py3-none-any.whl", hash = "sha256:5e11c9f5c7c3f24959edbf2dffdc01bba860228acf657129467d8a7468591527", size = 72747, upload-time = "2025-06-21T04:03:15.705Z" },
+]
+
+[[package]]
+name = "starlette-admin"
+version = "0.15.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "python-multipart" },
+    { name = "starlette" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/84/bb719df244cb8b720a81bd88aff18ababceb1f3e9afaf44563ba61b2d1b4/starlette_admin-0.15.1.tar.gz", hash = "sha256:beccdb8695ecadc9f314e0b5afd2b04e067538e8273d0c3199b671198b5ee43e", size = 2098915, upload-time = "2025-05-26T15:37:56.278Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/41/8f0e354441aae2fc843e7fafb7e64fbfef541f3ac2d238c7b05b1136ffd0/starlette_admin-0.15.1-py3-none-any.whl", hash = "sha256:a832e8a0e8a16c9c3f2012ddf352867ad8e730f21192caa85225798091cba130", size = 2169980, upload-time = "2025-05-26T15:37:53.251Z" },
 ]
 
 [[package]]

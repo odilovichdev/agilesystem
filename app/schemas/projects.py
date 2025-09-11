@@ -2,9 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr
 
-from app.schemas.users import UserListOut
 from app.schemas.auth import Role
-
 
 
 class ProjectOwnerNasted(BaseModel):
@@ -54,9 +52,9 @@ class ProjectResponse(BaseModel):
                     "id": 1,
                     "email": "bY9vD@example.com",
                     "fullname": "John Doe",
-                }
+                },
             }
-        }
+        },
     }
 
 
@@ -64,4 +62,3 @@ class ProjectUpdateRequest(BaseModel):
     name: str | None = None
     description: str | None = None
     is_private: bool | None = None
-

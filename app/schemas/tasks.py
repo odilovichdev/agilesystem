@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr
 
-from app.enums import Status, Priority, Role
+from app.enums import Priority, Role, Status
 
 
 class TaskCreateRequest(BaseModel):
@@ -10,7 +10,7 @@ class TaskCreateRequest(BaseModel):
     summary: str
     description: str | None = None
     status: Status
-    priority: Priority 
+    priority: Priority
     assignee_id: int
     due_date: datetime
 
@@ -23,7 +23,7 @@ class TaskListUserNested(BaseModel):
     id: int
     email: EmailStr
     role: Role
-    fullname: str | None 
+    fullname: str | None
 
 
 class TaskListResponse(BaseModel):
@@ -58,4 +58,3 @@ class TaskUpdateRequest(BaseModel):
 
 class TaskMoveRequest(BaseModel):
     status: Status
-
