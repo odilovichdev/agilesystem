@@ -40,5 +40,5 @@ def generate_activation_token(user_id: int):
     return jwt.encode({"user_id": user_id}, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_user_from_jwt_token(token: str):
+def decoded_token_from_user(token: str):
     return jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)

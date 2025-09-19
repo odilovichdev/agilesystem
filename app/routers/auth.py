@@ -1,21 +1,24 @@
-from fastapi import APIRouter, HTTPException
 
-from app.celery import send_email
-from app.dependencies import db_dep, oauth2_form_dep
+from fastapi import APIRouter, HTTPException
+from fastapi.background import BackgroundTasks
+
 from app.enums import Role
 from app.models import User
+from app.celery import send_email
+from app.task import write_notification
+from app.dependencies import db_dep, oauth2_form_dep
 from app.schemas.auth import TokenResponse, UserRegisterRequest
 from app.settings import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    FRONTEND_URL,
     REFRESH_TOKEN_EXPIRE_MINUTES,
+    FRONTEND_URL,
 )
 from app.utils import (
     create_jwt_token,
-    decode_user_from_jwt_token,
-    generate_activation_token,
     hashed_password,
     verify_password,
+    generate_activation_token,
+    decoded_token_from_user,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -46,23 +49,22 @@ async def register(db: db_dep, request_data: UserRegisterRequest):
         hashed_password=hashed_password(request_data.password),
         role=request_data.role,
         is_active=False,
-        is_delated=False,
+        is_deleted=False,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
     token = generate_activation_token(user_id=user.id)
-    print("salom")
 
     send_email.delay(
         to_email=user.email,
-        subject="Confirm your registration to Agile",
-        body=f"You can click the link to confirm your email. {FRONTEND_URL}/auth/confirm/{token}/",
+        subject="Confirm your register to Agile",
+        body=f"You can click the link to confirm your email: {FRONTEND_URL}/auth/confirm/{token}/",
     )
 
     return {
-        "detail": f"Confirmation email sent to {user.email}. Please confirm to finalize your registration."
+        "detail": f"Confirmation email sent to {user.email}. Please confirm to finalize your registration.",
     }
 
 
@@ -91,15 +93,21 @@ async def login(form_data: oauth2_form_dep, db: db_dep):
 
 @router.get("/confirm/{token}/")
 async def confirm_email(db: db_dep, token: str):
-    user_id = decode_user_from_jwt_token(token=token).get("user_id")
+    user_id = decoded_token_from_user(token=token).get("user_id")
 
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
-        raise HTTPException(404, "User not found.")
+        raise HTTPException(404, "User Not Found.")
 
     user.is_active = True
     db.commit()
     db.refresh(user)
 
     return {"detail": "Email confirmed."}
+
+
+@router.post("/send-notification/{email}")
+async def send_notification(email: str, background_task: BackgroundTasks):
+    background_task.add_task(write_notification, email, message="Some notification")
+    return {"message": "Notification send in the background."}

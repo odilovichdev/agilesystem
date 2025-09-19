@@ -70,7 +70,7 @@ class StarletteAuthProvider(AuthProvider):
             return None
 
         try:
-            payload = jwt.encode(token, SECRET_KEY, algorithm=ALGORITHM)
+            payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
             email: str = payload.get("sub")
 
             if not email:
