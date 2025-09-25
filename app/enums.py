@@ -21,3 +21,11 @@ class Priority(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
+
+class WSEventTypes(str, Enum):
+    task_created = "task_created"
+    task_status_change = "task_status_change"
+    task_move_ready = "task_move_ready"
+    task_rejected = "task_rejected"
+    task_created_high = "task_created_high"

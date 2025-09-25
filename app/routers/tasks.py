@@ -1,9 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Request
 
-from app.dependencies import current_user_dep, db_dep, project_manager_dep
+from app.websocket.manager import WSManager
+from app.enums import WSEventTypes, Priority
+from app.websocket.manager import dispatch_ws_event
 from app.models import Project, ProjectMember, Task
+from app.dependencies import current_user_dep, db_dep, project_manager_dep
 from app.schemas.tasks import (
     TaskCreateRequest,
     TaskDetailResponse,
@@ -24,7 +27,10 @@ async def get_tasks(db: db_dep):
 
 @router.post("/create/", response_model=TaskDetailResponse)
 async def task_create(
-    db: db_dep, user: project_manager_dep, task_data: TaskCreateRequest
+    db: db_dep, 
+    user: project_manager_dep, 
+    task_data: TaskCreateRequest,
+    request: Request
 ):
     project = db.query(Project).filter(Project.key == task_data.project_key).first()
 
@@ -59,6 +65,24 @@ async def task_create(
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
+
+    ws_manager: WSManager = request.app.state.ws_manager
+    event_type = (
+        WSEventTypes.task_created_high
+        if task_data.priority == Priority.HIGH
+        else WSEventTypes.task_created
+    )
+
+    await dispatch_ws_event(
+        ws_manager=ws_manager,
+        event_type=event_type,
+        project_id=new_task.project_id,
+        payload={
+            "type": event_type,
+            "task_id": new_task.id,
+            "project_id": new_task.project_id
+        }
+    )
 
     return new_task
 
@@ -129,131 +153,3 @@ async def get_task_comments(db: db_dep, user: current_user_dep, task_key: str):
 
     return comments
 
-
-# @router.get("/list/", response_model=List[TaskListResponse])
-# async def task_list(db: db_dep):
-
-#     tasks = (
-#         db.query(Task).
-#         options(
-#             # load_only(Task.id, Task.key, Task.summary, Task.description, Task.priority, Task.due_date),
-#             selectinload(Task.project),
-#             selectinload(Task.status),
-#             selectinload(Task.assignee),
-#             selectinload(Task.reporter)
-#         )
-#         .all()
-#     )
-
-#     # tasks = db.query(Task).all()
-
-#     return tasks
-
-
-# @router.delete("/{task_id:int}/delete/")
-# async def delete_task(db: db_dep, task_id: int):
-#     task = db.query(Task).filter(Task.id==task_id).first()
-
-#     if not task:
-#         raise HTTPException(
-#             detail="Task not found.",
-#             status_code=404
-#         )
-
-#     db.delete(task)
-#     db.commit()
-
-#     return {
-#         "success": True,
-#         "message": "Task delete successfully"
-#     }
-
-
-# @router.put("/{task_id:int}/update/", response_model=TaskEditOut)
-# async def edit_task(db: db_dep, task_id: int, user: project_manager_dep, task_in: TaskEditIn):
-#     task = db.query(Task).filter(Task.id==task_id).first()
-
-#     if not task:
-#         raise HTTPException(
-#             detail=f"Task with {task_id} not found.",
-#             status_code=404
-#         )
-
-#     project_member = db.query(ProjectMemmber).filter(
-#         ProjectMemmber.user_id==user.id,
-#         ProjectMemmber.project_id==task.project_id
-#         ).first()
-
-#     if not project_member:
-#         raise HTTPException(
-#             detail="Siz bu task yaratilgan loyihaga biriktirilmagansiz.",
-#             status_code=403
-#         )
-
-#     if not db.query(Task).filter(Task.reporter_id==user.id).first():
-#         raise HTTPException(
-#             detail="Siz bu task ni yaratmagansiz.",
-#             status_code=403
-#         )
-
-#     update_task = task_in.model_dump(exclude_unset=True)
-
-#     for key, value in update_task.items():
-#         setattr(task, key, value)
-
-#     db.commit()
-#     db.refresh(task)
-
-#     return task
-
-
-# @router.get("/{task_id:int}/", response_model=TaskDetailOut)
-# async def task_detail(db: db_dep, task_id: int):
-#     task = db.query(Task).filter(Task.id==task_id).first()
-
-#     if not task:
-#         raise HTTPException(
-#             detail="Task topilmadi.",
-#             status_code=404
-#         )
-
-#     return task
-
-
-# @router.put("/{task_id:int}/add-assignee/", response_model=TaskDetailOut)
-# async def task_add_assignee(db: db_dep, user: project_manager_dep, task_id: int, task_in: TaskAddAssigneeIn):
-#     task = db.query(Task).filter(Task.id==task_id).first()
-
-
-#     if task.reporter_id != user.id:
-#         raise HTTPException(
-#             detail="Siz bu taskni yaratmagansiz.",
-#             status_code=403
-#         )
-
-#     if not task:
-#         raise HTTPException(
-#             detail="Task not found.",
-#             status_code=404
-#         )
-
-#     status = db.query(Status).filter(Status.id==task_in.status_id).first()
-
-#     if not status:
-#         raise HTTPException(
-#             detail="Status not found.",
-#             status_code=404
-#         )
-
-#     task.assignee_id = task_in.assignee_id
-#     task.status_id = task_in.status_id
-
-#     db.commit()
-#     db.refresh(task)
-
-#     return task
-
-
-# @router.patch("/{task_id:int}/")
-# async def update_status_for_task(db: db_dep):
-#     ...

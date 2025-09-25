@@ -18,7 +18,7 @@ from app.utils import (
     hashed_password,
     verify_password,
     generate_activation_token,
-    decoded_token_from_user,
+    decode_user_from_jwt,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -79,11 +79,11 @@ async def login(form_data: oauth2_form_dep, db: db_dep):
         raise HTTPException(400, "Incorrect password")
 
     access_token = create_jwt_token(
-        {"user_id": user.id}, expires_delta=ACCESS_TOKEN_EXPIRE_MINUTES
+        {"user_id": user.id, "role": user.role}, expires_delta=ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     refresh_token = create_jwt_token(
-        {"user_id": user.id}, expires_delta=REFRESH_TOKEN_EXPIRE_MINUTES
+        {"user_id": user.id, "role": user.role}, expires_delta=REFRESH_TOKEN_EXPIRE_MINUTES
     )
 
     return TokenResponse(
@@ -93,7 +93,7 @@ async def login(form_data: oauth2_form_dep, db: db_dep):
 
 @router.get("/confirm/{token}/")
 async def confirm_email(db: db_dep, token: str):
-    user_id = decoded_token_from_user(token=token).get("user_id")
+    user_id = decode_user_from_jwt(token=token).get("user_id")
 
     user = db.query(User).filter(User.id == user_id).first()
 

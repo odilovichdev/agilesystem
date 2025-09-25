@@ -24,6 +24,7 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "starlette-admin" },
     { name = "typer" },
+    { name = "websockets" },
 ]
 
 [package.metadata]
@@ -45,6 +46,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.41" },
     { name = "starlette-admin", specifier = ">=0.15.1" },
     { name = "typer", extras = ["all"], specifier = ">=0.16.0" },
+    { name = "websockets", specifier = ">=15.0.1" },
 ]
 
 [[package]]
