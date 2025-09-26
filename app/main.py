@@ -10,7 +10,8 @@ from app.routers import (
     auth_router, 
     project_router, 
     task_router, 
-    user_router
+    user_router,
+    notif_router
 )
 from app.middleware import (
     SimplePrintLoggerMiddleware,
@@ -56,6 +57,7 @@ app.include_router(project_router)
 app.include_router(user_router)
 app.include_router(task_router)
 app.include_router(ws_router)
+app.include_router(notif_router)
 
 app.add_middleware(SimplePrintLoggerMiddleware)
 app.add_middleware(ProcessTimeLoggerMiddleware)
