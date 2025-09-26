@@ -67,10 +67,12 @@ async def dispatch_ws_event(
             project_id, payload, {Role.developer, Role.tester}
             )
     elif event_type == WSEventTypes.task_status_change:
-        await ws_manager.send_to_roles(project_id, payload, {Role.manager})
+        await ws_manager.send_to_roles(project_id, payload, {Role.manager, Role.developer})
     elif event_type == WSEventTypes.task_move_ready:
         await ws_manager.send_to_roles(project_id, payload, {Role.tester})
     elif event_type == WSEventTypes.task_rejected:
         await ws_manager.send_to_roles(project_id, payload, {Role.developer})
     elif event_type == WSEventTypes.task_created_high:
+        await ws_manager.send_to_all_project_members(project_id, payload)
+    elif event_type == WSEventTypes.task_all:
         await ws_manager.send_to_all_project_members(project_id, payload)

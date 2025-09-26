@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
+from fastapi import HTTPException
 from passlib.context import CryptContext
 
 from app.settings import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
@@ -42,3 +43,10 @@ def generate_activation_token(user_id: int):
 
 def decode_user_from_jwt(token: str):
     return jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+
+
+def get_object_or_404(db, model, **filters):
+    obj = db.query(model).filter_by(**filters).first()
+    if not obj:
+        raise HTTPException(404, f"{model.__name__}")
+    return obj

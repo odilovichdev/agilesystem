@@ -4,15 +4,24 @@ from pydantic import BaseModel, EmailStr
 
 from app.enums import Priority, Role, Status
 
+class TaskUserNested(BaseModel):
+    id: int
+    email: EmailStr
+    role: Role
+
+    model_config = {"from_attributes": True}
+
 
 class TaskCreateRequest(BaseModel):
     project_key: str
     summary: str
     description: str | None = None
-    status: Status
     priority: Priority
-    assignee_id: int
     due_date: datetime
+
+
+class TaskAddDeveloperRequest(BaseModel):
+    user_id: int
 
 
 class TaskListProjectNested(BaseModel):
@@ -29,6 +38,8 @@ class TaskListUserNested(BaseModel):
 class TaskListResponse(BaseModel):
     id: int
     project: TaskListProjectNested
+    assignee: TaskUserNested | None = None
+    reporter: TaskUserNested
     key: str
     summary: str
     status: Status
@@ -42,7 +53,7 @@ class TaskDetailResponse(BaseModel):
     summary: str
     status: Status
     priority: Priority
-    assignee: TaskListUserNested
+    assignee: TaskListUserNested | None = None
     reporter: TaskListUserNested
     due_date: datetime
 

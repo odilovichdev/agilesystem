@@ -5,6 +5,7 @@ from fastapi.background import BackgroundTasks
 from app.enums import Role
 from app.models import User
 from app.celery import send_email
+from app.utils import get_object_or_404
 from app.task import write_notification
 from app.dependencies import db_dep, oauth2_form_dep
 from app.schemas.auth import TokenResponse, UserRegisterRequest
@@ -70,10 +71,8 @@ async def register(db: db_dep, request_data: UserRegisterRequest):
 
 @router.post("/login/")
 async def login(form_data: oauth2_form_dep, db: db_dep):
-    user = db.query(User).filter(User.email == form_data.username).first()
 
-    if not user:
-        raise HTTPException(400, "Incorrect username")
+    user = get_object_or_404(db, User, email=form_data.username)
 
     if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(400, "Incorrect password")
@@ -93,12 +92,9 @@ async def login(form_data: oauth2_form_dep, db: db_dep):
 
 @router.get("/confirm/{token}/")
 async def confirm_email(db: db_dep, token: str):
+    
     user_id = decode_user_from_jwt(token=token).get("user_id")
-
-    user = db.query(User).filter(User.id == user_id).first()
-
-    if not user:
-        raise HTTPException(404, "User Not Found.")
+    user = get_object_or_404(db, User, id=user_id)
 
     user.is_active = True
     db.commit()

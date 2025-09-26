@@ -29,3 +29,7 @@ class WSEventTypes(str, Enum):
     task_move_ready = "task_move_ready"
     task_rejected = "task_rejected"
     task_created_high = "task_created_high"
+    task_all = "task_all"
+
+
+

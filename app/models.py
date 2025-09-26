@@ -121,7 +121,7 @@ class Task(Base, TimestampMixin):
     key: Mapped[str] = mapped_column(String(20), nullable=False)
     summary: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
-    status: Mapped[int] = mapped_column(String(10), nullable=False)
+    status: Mapped[int] = mapped_column(String(30), nullable=False) #IN_PROGRESS
     priority: Mapped[str] = mapped_column(String(10), nullable=False)
     assignee_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
